@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter Dashboard - Online Voting System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🗳️ Voter Dashboard</h1>
+        <div>
+            <span id="welcomeMsg"></span>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="message"></div>
+
+        <!-- Voting Closed Alert -->
+        <div id="votingClosed" class="alert alert-warning hidden">
+            <strong>⏰ Voting Closed!</strong> The voting period has expired. You can no longer cast your vote.
+        </div>
+
+        <!-- Already Voted Alert -->
+        <div id="alreadyVoted" class="alert alert-info hidden">
+            <strong>✅ You have already voted!</strong> Thank you for participating. Each voter can vote only once.
+        </div>
+
+        <!-- Candidates List for Voting -->
+        <div id="votingSection" class="card">
+            <h2>Cast Your Vote</h2>
+            <p>Select one candidate and click "Vote". You can only vote once.</p>
+            <div id="candidatesList"></div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Check session on page load
+        checkSession('user');
+
+        // Load approved candidates
+        async function loadCandidates() {
+            try {
+                const res = await fetch('/api/candidates/approved');
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showMessage(data.error, 'error');
+                    return;
+                }
+
+                // Show welcome message
+                const sessionRes = await fetch('/api/session');
+                const session = await sessionRes.json();
+                document.getElementById('welcomeMsg').textContent = 'Welcome, ' + session.name;
+
+                // Check voting status
+                if (!data.votingOpen) {
+                    document.getElementById('votingClosed').classList.remove('hidden');
+                    document.getElementById('votingSection').classList.add('hidden');
+                    return;
+                }
+
+                if (data.hasVoted) {
+                    document.getElementById('alreadyVoted').classList.remove('hidden');
+                    document.getElementById('votingSection').classList.add('hidden');
+                    return;
+                }
+
+                // Render candidate cards
+                const container = document.getElementById('candidatesList');
+                if (data.candidates.length === 0) {
+                    container.innerHTML = '<p>No approved candidates yet. Check back later.</p>';
+                    return;
+                }
+
+                data.candidates.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'candidate-card';
+                    div.innerHTML = `
+                        <div class="info">
+                            <h3>${escapeHtml(c.full_name)}</h3>
+                            <p>${escapeHtml(c.description || 'No description provided')}</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="castVote(${c.candidate_id})">Vote</button>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (err) {
+                showMessage('Failed to load candidates. Is the server running?', 'error');
+            }
+        }
+
+        // Cast vote
+        async function castVote(candidateId) {
+            if (!confirm('Are you sure you want to vote for this candidate? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ candidate_id: candidateId })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showMessage(data.message, 'success');
+                    // Reload to show "already voted" state
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
+
+        // Simple HTML escaping to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadCandidates();
+    </script>
+</body>
+</html>

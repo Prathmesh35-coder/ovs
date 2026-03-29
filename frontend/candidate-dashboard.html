@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Dashboard - Online Voting System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🗳️ Candidate Dashboard</h1>
+        <div>
+            <span id="welcomeMsg"></span>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="message"></div>
+
+        <div class="card">
+            <h2>Election Results</h2>
+            <p>View the current vote count for all approved candidates.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Candidate Name</th>
+                        <th>Total Votes</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        checkSession('candidate');
+
+        async function loadResults() {
+            try {
+                // Show welcome message
+                const sessionRes = await fetch('/api/session');
+                const session = await sessionRes.json();
+                document.getElementById('welcomeMsg').textContent = 'Welcome, ' + session.name;
+
+                const res = await fetch('/api/results');
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showMessage(data.error, 'error');
+                    return;
+                }
+
+                const tbody = document.getElementById('resultsTable');
+                if (data.results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No results yet.</td></tr>';
+                    return;
+                }
+
+                data.results.forEach((r, i) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${i + 1}</td>
+                        <td>${r.full_name}</td>
+                        <td>${r.total_votes}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showMessage('Failed to load results', 'error');
+            }
+        }
+
+        loadResults();
+    </script>
+</body>
+</html>

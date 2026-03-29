@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Online Voting System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🗳️ Admin Dashboard</h1>
+        <div>
+            <a href="#" onclick="showTab('candidates')">Candidates</a>
+            <a href="#" onclick="showTab('users')">Users</a>
+            <a href="#" onclick="showTab('results')">Results</a>
+            <a href="#" onclick="showTab('settings')">Settings</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="message"></div>
+
+        <!-- TAB: Manage Candidates -->
+        <div id="tab-candidates" class="card">
+            <h2>Manage Candidates</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="candidatesTable"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB: View Users -->
+        <div id="tab-users" class="card hidden">
+            <h2>Registered Voters</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Registered On</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB: View Results -->
+        <div id="tab-results" class="card hidden">
+            <h2>Voting Results & Analysis</h2>
+
+            <!-- Winner Box -->
+            <div id="winnerBox" class="winner-box hidden">
+                <h3>🏆 Leading Candidate</h3>
+                <p id="winnerName"></p>
+                <p id="winnerVotes"></p>
+            </div>
+
+            <p id="totalVotesInfo"></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Candidate Name</th>
+                        <th>Total Votes</th>
+                    </tr>
+                </thead>
+                <tbody id="adminResultsTable"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB: Settings (Extend Voting) -->
+        <div id="tab-settings" class="card hidden">
+            <h2>Voting Period Settings</h2>
+            <div id="currentSettings"></div>
+            <form onsubmit="extendVoting(event)" class="mt-20">
+                <h3>Extend Voting End Date</h3>
+                <div class="form-group">
+                    <label>New End Date & Time:</label>
+                    <input type="datetime-local" id="newEndDate" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Extend Voting Period</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        checkSession('admin');
+
+        // Tab navigation
+        function showTab(tab) {
+            ['candidates', 'users', 'results', 'settings'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            document.getElementById('message').innerHTML = '';
+
+            // Load data for the selected tab
+            if (tab === 'candidates') loadCandidates();
+            if (tab === 'users') loadUsers();
+            if (tab === 'results') loadResults();
+            if (tab === 'settings') loadSettings();
+        }
+
+        // --- Load Candidates ---
+        async function loadCandidates() {
+            try {
+                const res = await fetch('/api/admin/candidates');
+                const data = await res.json();
+                const tbody = document.getElementById('candidatesTable');
+                tbody.innerHTML = '';
+
+                data.candidates.forEach(c => {
+                    const statusText = c.is_approved === 1 ? 'Approved' : c.is_approved === 2 ? 'Rejected' : 'Pending';
+                    const badgeClass = c.is_approved === 1 ? 'badge-approved' : c.is_approved === 2 ? 'badge-rejected' : 'badge-pending';
+
+                    let actions = '';
+                    if (c.is_approved === 0) {
+                        actions = `
+                            <button class="btn btn-success btn-sm" onclick="approveCandidate(${c.candidate_id})">Approve</button>
+                            <button class="btn btn-danger btn-sm" onclick="rejectCandidate(${c.candidate_id})">Reject</button>
+                        `;
+                    } else if (c.is_approved === 2) {
+                        actions = `<button class="btn btn-success btn-sm" onclick="approveCandidate(${c.candidate_id})">Approve</button>`;
+                    } else {
+                        actions = '<em>Approved</em>';
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.candidate_id}</td>
+                        <td>${c.full_name}</td>
+                        <td>${c.email}</td>
+                        <td>${c.description || '-'}</td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                        <td>${actions}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showMessage('Failed to load candidates', 'error');
+            }
+        }
+
+        // --- Approve Candidate ---
+        async function approveCandidate(id) {
+            const res = await fetch('/api/admin/candidate/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidate_id: id })
+            });
+            const data = await res.json();
+            showMessage(data.message || data.error, res.ok ? 'success' : 'error');
+            loadCandidates();
+        }
+
+        // --- Reject Candidate ---
+        async function rejectCandidate(id) {
+            const res = await fetch('/api/admin/candidate/reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidate_id: id })
+            });
+            const data = await res.json();
+            showMessage(data.message || data.error, res.ok ? 'success' : 'error');
+            loadCandidates();
+        }
+
+        // --- Load Users ---
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const data = await res.json();
+                const tbody = document.getElementById('usersTable');
+                tbody.innerHTML = '';
+
+                if (data.users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">No registered voters yet.</td></tr>';
+                    return;
+                }
+
+                data.users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${u.user_id}</td>
+                        <td>${u.full_name}</td>
+                        <td>${u.email}</td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showMessage('Failed to load users', 'error');
+            }
+        }
+
+        // --- Load Results ---
+        async function loadResults() {
+            try {
+                const res = await fetch('/api/admin/results');
+                const data = await res.json();
+
+                // Total votes
+                document.getElementById('totalVotesInfo').textContent =
+                    'Total votes cast: ' + data.totalVotes;
+
+                // Winner
+                if (data.winner && data.winner.total_votes > 0) {
+                    document.getElementById('winnerBox').classList.remove('hidden');
+                    document.getElementById('winnerName').textContent = data.winner.full_name;
+                    document.getElementById('winnerVotes').textContent = data.winner.total_votes + ' votes';
+                }
+
+                // Results table
+                const tbody = document.getElementById('adminResultsTable');
+                tbody.innerHTML = '';
+
+                if (data.results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No results yet.</td></tr>';
+                    return;
+                }
+
+                data.results.forEach((r, i) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${i + 1}</td>
+                        <td>${r.full_name}</td>
+                        <td>${r.total_votes}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showMessage('Failed to load results', 'error');
+            }
+        }
+
+        // --- Load Settings ---
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/admin/settings');
+                const data = await res.json();
+
+                if (data.settings) {
+                    const start = new Date(data.settings.voting_start_date).toLocaleString();
+                    const end = new Date(data.settings.voting_end_date).toLocaleString();
+                    const now = new Date();
+                    const endDate = new Date(data.settings.voting_end_date);
+                    const status = now <= endDate ? '🟢 Voting is OPEN' : '🔴 Voting is CLOSED';
+
+                    document.getElementById('currentSettings').innerHTML = `
+                        <p><strong>Start Date:</strong> ${start}</p>
+                        <p><strong>End Date:</strong> ${end}</p>
+                        <p><strong>Status:</strong> ${status}</p>
+                    `;
+                }
+            } catch (err) {
+                showMessage('Failed to load settings', 'error');
+            }
+        }
+
+        // --- Extend Voting ---
+        async function extendVoting(event) {
+            event.preventDefault();
+            const newDate = document.getElementById('newEndDate').value;
+
+            const res = await fetch('/api/admin/extend-voting', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_end_date: newDate })
+            });
+            const data = await res.json();
+            showMessage(data.message || data.error, res.ok ? 'success' : 'error');
+            if (res.ok) loadSettings();
+        }
+
+        // Load candidates tab by default
+        loadCandidates();
+    </script>
+</body>
+</html>
