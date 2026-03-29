@@ -1,7 +1,7 @@
 // ============================================
 // Online Voting System - Express Backend Server
 // ============================================
-
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
@@ -10,7 +10,7 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // ============================================
 // MIDDLEWARE
@@ -24,25 +24,23 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Session configuration
 app.use(session({
-    secret: 'voting-system-secret-key-change-in-production',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 2 } // 2 hours
+    cookie: { maxAge: 1000 * 60 * 60 * 2 }
 }));
-
 // ============================================
 // DATABASE CONNECTION
 // ============================================
 // Update these credentials to match your MySQL setup
 const dbConfig = {
-    host: 'localhost',
-    user: 'root',
-    password: 'Prathmesh#35',       // <-- Set your MySQL root password here
-    database: 'online_voting_system',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     waitForConnections: true,
     connectionLimit: 10
 };
-
 let db;
 
 async function initDatabase() {
