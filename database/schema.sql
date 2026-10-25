@@ -1,17 +1,12 @@
--- ============================================
--- Online Voting System - MySQL Database Schema
--- ============================================
--- This file contains all CREATE TABLE statements,
--- constraints, sample data, and useful SQL queries.
 
 -- Create the database
 CREATE DATABASE IF NOT EXISTS online_voting_system;
 USE online_voting_system;
 
--- ============================================
+
 -- TABLE: admins
 -- Stores admin login credentials (no registration)
--- ============================================
+
 CREATE TABLE admins (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -19,10 +14,10 @@ CREATE TABLE admins (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
+
 -- TABLE: users (Voters)
 -- Registered voters who can vote for candidates
--- ============================================
+
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
@@ -31,10 +26,10 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
+
 -- TABLE: candidates
 -- People who register as candidates for election
--- ============================================
+
 CREATE TABLE candidates (
     candidate_id INT AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
@@ -45,11 +40,11 @@ CREATE TABLE candidates (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
+
 -- TABLE: votes
 -- Records each vote; UNIQUE constraint on user_id
 -- ensures one vote per user
--- ============================================
+
 CREATE TABLE votes (
     vote_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -68,11 +63,11 @@ CREATE TABLE votes (
     UNIQUE KEY unique_vote_per_user (user_id)
 ) ENGINE=InnoDB;
 
--- ============================================
+
 -- TABLE: settings
 -- Stores voting period (start/end dates)
 -- Only one row expected (id = 1)
--- ============================================
+
 CREATE TABLE settings (
     setting_id INT AUTO_INCREMENT PRIMARY KEY,
     voting_start_date DATETIME NOT NULL,
@@ -80,26 +75,26 @@ CREATE TABLE settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
+
 -- INSERT SAMPLE DATA
--- ============================================
+
 
 -- Admin account (password: "admin123" - bcrypt hash)
 -- In production, generate this hash properly
 INSERT INTO admins (username, password) VALUES
 ('admin', '$2b$10$YourBcryptHashHere1234567890abcdefghijklmnopqrst');
 -- NOTE: The backend seeds this properly on first run. This is a placeholder.
--- UPDATE admins SET password = '$2b$10$1LdqHj8OW12QdfHv1zyTL.QjsRfdtiQHooou8HSTlqmHg7tbygJMu' WHERE username = 'admin';
+
 -- Sample users/voters (passwords will be hashed by backend)
 -- These are placeholders; register through the app for real hashed passwords.
 
 -- Sample voting period settings
 INSERT INTO settings (voting_start_date, voting_end_date) VALUES
-('2025-01-01 00:00:00', '2025-12-31 23:59:59');
+('2026-03-28 00:00:00', '2026-12-31 23:59:59');
 
--- ============================================
+
 -- USEFUL SQL QUERIES
--- ============================================
+
 
 -- 1. Fetch all approved candidates
 -- SELECT candidate_id, full_name, description

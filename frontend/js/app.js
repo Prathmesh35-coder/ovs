@@ -1,7 +1,3 @@
-// ============================================
-// Online Voting System - Shared JavaScript
-// Common utility functions used across all pages
-// ============================================
 
 /**
  * Display a message (success or error) on the page.
